@@ -1,11 +1,11 @@
 {
-  "deploymentFrequency": 0.29,
-  "deploymentFrequencyRaw": 2,
+  "deploymentFrequency": 0.71,
+  "deploymentFrequencyRaw": 5,
   "deploymentPeriodDays": 7,
-  "totalDeployments": 6,
+  "totalDeployments": 8,
   "leadTimeMinutes": 0,
-  "changeFailureRate": 33,
+  "changeFailureRate": 25,
   "failedDeployments": 2,
   "mttrMinutes": 5,
-  "lastUpdated": "2025-12-15T23:14:31.123Z"
+  "lastUpdated": "2025-12-15T23:19:47.474Z"
 }
