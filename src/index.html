@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DORA Metrics Dashboard - KPI</title>
+  <meta name="description" content="Dashboard des métriques DORA pour mesurer la performance DevOps">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🚀 DORA Metrics Dashboard</h1>
+      <p>Métriques de performance DevOps</p>
+      <p class="last-updated" id="lastUpdated">Chargement...</p>
+    </header>
+
+    <div class="kpi-grid">
+      <!-- Deployment Frequency -->
+      <div class="kpi-card deployment">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-label">Deployment Frequency</div>
+        <div class="kpi-value" id="df">--</div>
+        <div class="kpi-unit">déploiements / jour</div>
+        <span class="badge" id="dfBadge">--</span>
+        <p class="kpi-description">À quelle fréquence l'équipe déploie en production</p>
+      </div>
+
+      <!-- Lead Time for Changes -->
+      <div class="kpi-card leadtime">
+        <div class="kpi-icon">⏱️</div>
+        <div class="kpi-label">Lead Time for Changes</div>
+        <div class="kpi-value" id="lt">--</div>
+        <div class="kpi-unit">minutes</div>
+        <span class="badge" id="ltBadge">--</span>
+        <p class="kpi-description">Temps entre le commit et la mise en production</p>
+      </div>
+
+      <!-- Change Failure Rate -->
+      <div class="kpi-card failure">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-label">Change Failure Rate</div>
+        <div class="kpi-value" id="cfr">--</div>
+        <div class="kpi-unit">%</div>
+        <span class="badge" id="cfrBadge">--</span>
+        <p class="kpi-description">Pourcentage de déploiements causant des problèmes</p>
+      </div>
+
+      <!-- MTTR -->
+      <div class="kpi-card mttr">
+        <div class="kpi-icon">🔧</div>
+        <div class="kpi-label">MTTR (Mean Time To Restore)</div>
+        <div class="kpi-value" id="mttr">--</div>
+        <div class="kpi-unit">minutes</div>
+        <span class="badge" id="mttrBadge">--</span>
+        <p class="kpi-description">Temps moyen pour restaurer le service après incident</p>
+      </div>
+    </div>
+
+    <!-- Summary Table -->
+    <section class="summary-section">
+      <h2>📊 Tableau Récapitulatif</h2>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Métrique</th>
+            <th>Valeur</th>
+            <th>Interprétation</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody">
+          <tr>
+            <td colspan="4" class="loading">Chargement des données</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    // DORA Performance thresholds (based on DORA research)
+    const THRESHOLDS = {
+      deploymentFrequency: {
+        elite: 1,      // Multiple per day
+        high: 0.14,    // Weekly
+        medium: 0.03,  // Monthly
+      },
+      leadTime: {
+        elite: 60,       // < 1 hour
+        high: 1440,      // < 1 day
+        medium: 10080,   // < 1 week
+      },
+      changeFailureRate: {
+        elite: 5,   // < 5%
+        high: 10,   // < 10%
+        medium: 15, // < 15%
+      },
+      mttr: {
+        elite: 60,    // < 1 hour
+        high: 1440,   // < 1 day
+        medium: 10080 // < 1 week
+      }
+    };
+
+    function getPerformanceLevel(metric, value) {
+      const t = THRESHOLDS[metric];
+      if (metric === 'deploymentFrequency') {
+        if (value >= t.elite) return 'elite';
+        if (value >= t.high) return 'high';
+        if (value >= t.medium) return 'medium';
+        return 'low';
+      } else {
+        // For these metrics, lower is better
+        if (value <= t.elite) return 'elite';
+        if (value <= t.high) return 'high';
+        if (value <= t.medium) return 'medium';
+        return 'low';
+      }
+    }
+
+    function getLevelLabel(level) {
+      const labels = {
+        elite: 'Elite',
+        high: 'High',
+        medium: 'Medium',
+        low: 'Low'
+      };
+      return labels[level] || level;
+    }
+
+    function getInterpretation(metric, level) {
+      const interpretations = {
+        deploymentFrequency: {
+          elite: 'Excellente agilité',
+          high: 'Bonne fréquence',
+          medium: 'À améliorer',
+          low: 'Pipeline à optimiser'
+        },
+        leadTime: {
+          elite: 'Très rapide',
+          high: 'Rapide',
+          medium: 'Acceptable',
+          low: 'Lent - à optimiser'
+        },
+        changeFailureRate: {
+          elite: 'Excellente qualité',
+          high: 'Bonne qualité',
+          medium: 'Tests à renforcer',
+          low: 'Qualité insuffisante'
+        },
+        mttr: {
+          elite: 'Très réactif',
+          high: 'Réactif',
+          medium: 'Temps acceptable',
+          low: 'Monitoring à améliorer'
+        }
+      };
+      return interpretations[metric]?.[level] || '--';
+    }
+
+    function formatDate(isoString) {
+      if (!isoString) return 'N/A';
+      const date = new Date(isoString);
+      return date.toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function updateCard(id, value, badgeId, metric) {
+      document.getElementById(id).textContent = value;
+      const level = getPerformanceLevel(metric, value === '--' ? 0 : parseFloat(value));
+      const badge = document.getElementById(badgeId);
+      badge.textContent = getLevelLabel(level);
+      badge.className = `badge ${level}`;
+      return { level, interpretation: getInterpretation(metric, level) };
+    }
+
+    function updateSummaryTable(data, performances) {
+      const tbody = document.getElementById('summaryBody');
+      tbody.innerHTML = `
+        <tr>
+          <td>📦 Deployment Frequency</td>
+          <td><strong>${data.deploymentFrequency}</strong> /jour (${data.deploymentFrequencyRaw || data.deploymentFrequency} sur ${data.deploymentPeriodDays || 7} jours)</td>
+          <td>${performances.df.interpretation}</td>
+          <td><span class="badge ${performances.df.level}">${getLevelLabel(performances.df.level)}</span></td>
+        </tr>
+        <tr>
+          <td>⏱️ Lead Time</td>
+          <td><strong>${data.leadTimeMinutes}</strong> minutes</td>
+          <td>${performances.lt.interpretation}</td>
+          <td><span class="badge ${performances.lt.level}">${getLevelLabel(performances.lt.level)}</span></td>
+        </tr>
+        <tr>
+          <td>⚠️ Change Failure Rate</td>
+          <td><strong>${data.changeFailureRate}</strong>% (${data.failedDeployments || 0} échecs / ${data.totalDeployments || data.deploymentFrequencyRaw || '--'} déploiements)</td>
+          <td>${performances.cfr.interpretation}</td>
+          <td><span class="badge ${performances.cfr.level}">${getLevelLabel(performances.cfr.level)}</span></td>
+        </tr>
+        <tr>
+          <td>🔧 MTTR</td>
+          <td><strong>${data.mttrMinutes}</strong> minutes</td>
+          <td>${performances.mttr.interpretation}</td>
+          <td><span class="badge ${performances.mttr.level}">${getLevelLabel(performances.mttr.level)}</span></td>
+        </tr>
+      `;
+    }
+
+    // Load metrics
+    fetch('../data/dora-metrics.json')
+      .then(response => {
+        if (!response.ok) throw new Error('Fichier non trouvé');
+        return response.json();
+      })
+      .then(data => {
+        // Update last updated
+        document.getElementById('lastUpdated').textContent = 
+          `Dernière mise à jour: ${formatDate(data.lastUpdated)}`;
+        
+        // Update KPI cards
+        const performances = {
+          df: updateCard('df', data.deploymentFrequency, 'dfBadge', 'deploymentFrequency'),
+          lt: updateCard('lt', data.leadTimeMinutes, 'ltBadge', 'leadTime'),
+          cfr: updateCard('cfr', data.changeFailureRate, 'cfrBadge', 'changeFailureRate'),
+          mttr: updateCard('mttr', data.mttrMinutes, 'mttrBadge', 'mttr')
+        };
+        
+        // Update summary table
+        updateSummaryTable(data, performances);
+      })
+      .catch(err => {
+        console.error('Erreur:', err);
+        document.getElementById('lastUpdated').textContent = 'Erreur de chargement';
+        document.getElementById('summaryBody').innerHTML = `
+          <tr>
+            <td colspan="4" style="color: var(--accent-red);">
+              ⚠️ Impossible de charger les données. Assurez-vous que le fichier data/dora-metrics.json existe.
+            </td>
+          </tr>
+        `;
+      });
+  </script>
+</body>
+</html>

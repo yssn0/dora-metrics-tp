@@ -1,0 +1,31 @@
+name: DORA Metrics Automation
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install node-fetch
+
+      - name: Run DORA metrics
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_DORA }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/dora-metrics.js
+
+      - name: Commit metrics
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/dora-metrics.json
+          git commit -m "Update DORA metrics" || echo "No changes"
+          git push
