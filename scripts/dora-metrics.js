@@ -80,7 +80,12 @@ async function main() {
     process.exit(1);
   }
 
-  const runs = runsData.workflow_runs;
+  const allRuns = runsData.workflow_runs;
+
+  // ⚠️ IMPORTANT: Filtrer seulement le pipeline CI/CD (pas le workflow DORA)
+  const runs = allRuns.filter(r => r.name === "CI-CD Pipeline");
+  console.log(`Found ${runs.length} CI-CD Pipeline runs (filtered from ${allRuns.length} total runs)`);
+
   const totalDeployments = runs.length;
   const failed = runs.filter(r => r.conclusion === "failure").length;
 
